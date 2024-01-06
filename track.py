@@ -73,6 +73,8 @@ def detect(opt, line, class_id, result_callback):
 
     # Initialize
     device = select_device(opt.device)
+    # Move the model to the GPU if available
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     half &= device.type != 'cpu'  # half precision only supported on CUDA
 
     # The MOT16 evaluation runs multiple inference streams in parallel, each one writing to
@@ -217,8 +219,6 @@ def detect(opt, line, class_id, result_callback):
             # Stream results
             im0 = annotator.result()
 
-            handleImg(im0);
-
             if show_vid:
                 # count vehicle
                 color = (0, 255, 0)
@@ -275,7 +275,7 @@ def detect(opt, line, class_id, result_callback):
                 # print('FPS: ', fps_)
 
                 # Callback call
-                result_callback('./resultStream/your_file.jpeg',data_car, data_bus, data_truck, data_motor, fps_)
+                result_callback(im0, data_car, data_bus, data_truck, data_motor, fps_)
 
 
     # Print results
@@ -289,11 +289,7 @@ def detect(opt, line, class_id, result_callback):
             os.system('open ' + save_path)
 
 
-def handleImg(img):
-    im = Image.fromarray(img)
-    im.save("./resultStream/your_file.jpeg")
-    with open('./resultStream/your_file.jpeg', 'rb') as f:
-        base64Img = base64.b64encode(f.read())  # handle_my_custom_event(base64Img)
+
 
 
 def count_obj(box, w, h, id, label, line_pos):
