@@ -48,7 +48,7 @@ already = []
 line_pos = 0.6
 
 
-def detect(opt, line, class_id):
+def detect(opt, line, class_id, result_callback):
     car = 0
     bus = 0
     truck = 0
@@ -266,11 +266,15 @@ def detect(opt, line, class_id):
                 sum_fps += fps_
 
                 # print(im0)
-                print('Data car: ', data_car)
-                print('Data Bus: ', data_bus)
-                print('Data Truck: ', data_truck)
-                print('Data motor: ', data_motor)
-                print('FPS: ', fps_)
+                # print('Data car: ', data_car)
+                # print('Data Bus: ', data_bus)
+                # print('Data Truck: ', data_truck)
+                # print('Data motor: ', data_motor)
+                # print('FPS: ', fps_)
+
+                # Callback call
+                result_callback('./resultStream/your_file.jpeg',data_car, data_bus, data_truck, data_motor, fps_)
+
 
     # Print results
     t = tuple(x / seen * 1E3 for x in dt)  # speeds per image
