@@ -11,23 +11,19 @@ import sys
 
 sys.path.insert(0, './yolov5')
 
-from PIL import Image
-
 import argparse
 import os
 import platform
 import shutil
 import time
-import base64
 from pathlib import Path
 import cv2
 import torch
-import math
 import torch.backends.cudnn as cudnn
 
 from yolov5.models.common import DetectMultiBackend
 from yolov5.utils.dataloaders import LoadImages, LoadStreams
-from yolov5.utils.general import (LOGGER, check_img_size, non_max_suppression, scale_boxes, check_imshow, xyxy2xywh,
+from yolov5.utils.general import (check_img_size, non_max_suppression, scale_boxes, check_imshow, xyxy2xywh,
                                   increment_path)
 from yolov5.utils.torch_utils import select_device, time_sync
 from yolov5.utils.plots import Annotator, colors
@@ -49,14 +45,14 @@ already = []
 line_pos = 0.6
 start_time = time.time()
 fps_counter = 0
-vehicle_count =0
+vehicle_count = 0
+
+previous_already = []
+vehicle_count_per_second = 0
+elapsed_time = 0
 
 
-previous_already = []  
-vehicle_count_per_second = 0  
-elapsed_time = 0  
-
-def detect(opt, line, class_id, result_callback):
+def detect(opt, line, class_id, event, result_callback):
     car = 0
     bus = 0
     truck = 0
@@ -66,6 +62,9 @@ def detect(opt, line, class_id, result_callback):
     out, source, yolo_model, deep_sort_model, show_vid, save_vid, save_txt, imgsz, evaluate, half, project, name, exist_ok = opt.output, opt.source, opt.yolo_model, opt.deep_sort_model, opt.show_vid, opt.save_vid, opt.save_txt, opt.imgsz, opt.evaluate, opt.half, opt.project, opt.name, opt.exist_ok
 
     global vehicle_count
+
+    # print("Detection called")
+    # print('DETECT event: ', event)
 
     # choose custom class from streamlit
     opt.classes = class_id
@@ -223,14 +222,13 @@ def detect(opt, line, class_id, result_callback):
                             bbox_h = output[3] - output[1]
                             # Write MOT compliant results to file
                             with open(txt_path, 'a') as f:
-                                f.write(('%g ' * 10  + '\n') % (frame_idx + 1, id, bbox_left,  # MOT format
+                                f.write(('%g ' * 10 + '\n') % (frame_idx + 1, id, bbox_left,  # MOT format
                                                                bbox_top, bbox_w, bbox_h, -1, -1, -1, -1))
 
                 # LOGGER.info(f'{s}Done. YOLO:({t3 - t2:.3f}s), DeepSort:({t5 - t4:.3f}s)')
 
             else:
-                deepsort.increment_ages()
-                # LOGGER.info('No detections')
+                deepsort.increment_ages()  # LOGGER.info('No detections')
 
             # Stream results
             im0 = annotator.result()
@@ -283,26 +281,22 @@ def detect(opt, line, class_id, result_callback):
                 prev_time = curr_time
                 sum_fps += fps_
 
-                # print(im0)
-                # print('Data car: ', data_car)
-                # print('Data Bus: ', data_bus)
-                # print('Data Truck: ', data_truck)
-                # print('Data motor: ', data_motor)
-                # print('FPS: ', fps_)
+                # print(im0)  # print('Data car: ', data_car)  # print('Data Bus: ', data_bus)  # print('Data Truck: ', data_truck)  # print('Data motor: ', data_motor)  # print('FPS: ', fps_)
 
                 # Callback call
-        
+
         elapsed_time = time.time() - start_time
         # print(f"Vehicles detected per second: {sum_fps}")
         if elapsed_time >= 1.0:  # Check if 1 second has passed
             print(f"Vehicles detected per second: {len(already)}")
-        # Reset counters for the next second
-            
+            # Reset counters for the next second
+
             vehicle_count = 0
             start_time = time.time()
             fps_counter = 0
-        
-        result_callback(im0, already, data_car, data_bus, data_truck, data_motor, fps_)
+
+        # print('TAG TRACK\tevent: ', event)
+        result_callback(event, im0, already, data_car, data_bus, data_truck, data_motor, fps_)
 
     # Print results
     t = tuple(x / seen * 1E3 for x in dt)  # speeds per image
@@ -340,7 +334,7 @@ def detect(opt, line, class_id, result_callback):
 #         # Also reset the 'already' list or object tracking list as needed
 #         if id in already:
 #             already.remove(id)
-    
+
 def count_obj(box, w, h, id, label, line_pos):
     global data_car, data_bus, data_truck, data_motor, already, vehicle_count
 
@@ -382,6 +376,7 @@ def count_obj(box, w, h, id, label, line_pos):
         if id in already:
             already.remove(id)
 
+
 # def count_obj(box, w, h, id, label, line_pos):
 #     global data_car, data_bus, data_truck, data_motor, already, vehicle_count
 
@@ -405,7 +400,7 @@ def count_obj(box, w, h, id, label, line_pos):
 #             elif label == 'motorcycle' and id not in data_motor:
 #                 data_motor.append(id)
 #                 flag = True
-        
+
 #         if(flag): 
 #             vehicle_count += 1
 
@@ -450,7 +445,6 @@ def parse_opt(model_path):
     opt = parser.parse_args()
     opt.imgsz *= 2 if len(opt.imgsz) == 1 else 1  # expand
     return opt
-
 
 # if __name__ == '__main__':
 #     opt = parse_opt()

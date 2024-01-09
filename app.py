@@ -4,28 +4,14 @@ import json
 
 import socketio
 from PIL import Image
-from flask import Flask
-from flask_socketio import SocketIO
 
 from track import *
 
-app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret!'
-
-socket_server = SocketIO(app, cors_allowed_origins='*')
 sio = socketio.Client()
 sio.connect('http://127.0.0.1:5000')
 
 # socket_server = SocketIO(app)
-fileName1 = 'Cars Moving On Road Stock Footage - Free Download.mp4'
-fileName2 = 'pexels_videos_2034115 (1080p).mp4'
-fileName3 = 'motor10s.mp4'
-fileName4 = 'test10s.mp4'
-
-flag1 = False
-flag2 = False
-flag3 = False
-flag4 = False
+fileName = 'Cars Moving On Road Stock Footage - Free Download.mp4'
 
 
 # define event
@@ -37,56 +23,6 @@ def connect():
 @sio.event
 def disconnect():
     print("Disconnected from the server")
-
-
-@socket_server.on('start_r1')
-def handle_my_custom_event(data):
-    global flag1
-    print(flag1)
-    if not flag1:
-        print("calling start demo")
-        flag1 = True
-        start_demo_detection(fileName1, 'r1_ai', detection_callback)
-        print("done detection")
-        flag1 = False
-        sio.emit('r1_ai', end_of_stream_data())
-
-
-@socket_server.on('start_r2')
-def handle_my_custom_event(data):
-    print("calling start demo")
-    global flag2
-    if not flag2:
-        flag2 = True
-        start_demo_detection(fileName2, 'r2_ai', detection_callback)
-        print("done detection")
-        flag2 = False
-        sio.emit('r2_ai', end_of_stream_data())
-
-
-@socket_server.on('start_r3')
-def handle_my_custom_event(data):
-    global flag3
-
-    if not flag3:
-        flag3 = True
-        print("calling start demo")
-        start_demo_detection(fileName3, 'r3_ai', detection_callback)
-        print("done detection")
-        flag3 = False
-        sio.emit('r3_ai', end_of_stream_data())
-
-
-@socket_server.on('start_r4')
-def handle_my_custom_event(data):
-    global flag4
-    if not flag4:
-        flag4 = True
-        print("calling start demo")
-        start_demo_detection(fileName4, 'r4_ai', detection_callback)
-        print("done detection")
-        flag4 = False
-        sio.emit('r4_ai', end_of_stream_data())
 
 
 def handleImg(img):
@@ -175,4 +111,4 @@ def start_demo_detection(fileName, event, result_callback):
 
 
 if __name__ == '__main__':
-    socket_server.run(app, host='0.0.0.0', port=4000)
+    start_demo_detection(fileName, 'r1_ai', detection_callback)
