@@ -13,7 +13,7 @@ app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, cors_allowed_origins='*')
 
 # socketio = SocketIO(app)
-fileName = 'one_lane_traffic_stop.mp4'
+fileName = 'pexels-christopher-schultz-5927708 (1080p).mp4'
 
 @socketio.on('send_image')
 def handle_my_custom_event(data):
@@ -90,5 +90,5 @@ def start_demo_detection(fileName, result_callback):
         detect(opt, line, assigned_class_id, result_callback)
 
 if __name__ == '__main__':
-    socketio.run(app,host='0.0.0.0', port=5000)
+    socketio.run(app,host='0.0.0.0', port=4000)
 
