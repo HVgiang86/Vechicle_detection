@@ -13,7 +13,7 @@ app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, cors_allowed_origins='*')
 
 # socketio = SocketIO(app)
-fileName = 'one_lane_traffic_stop.mp4'
+fileName = 'Cars Moving On Road Stock Footage - Free Download.mp4'
 
 @socketio.on('send_image')
 def handle_my_custom_event(data):
@@ -22,14 +22,6 @@ def handle_my_custom_event(data):
 
 def handleImg(img):
     im = Image.fromarray(img)
-    # image_path = './resultStream/your_file.jpeg'
-    
-    # image_path = os.path.splitext(image_path)[0]
-
-    # new_path = image_path + str(time.localtime()) + '.jpeg'
-    # im.save(new_path)
-
-    # with open(new_path, 'rb') as f:
     image_stream = io.BytesIO()
     im.save(image_stream, format='JPEG')
 
