@@ -22,6 +22,7 @@ import base64
 from pathlib import Path
 import cv2
 import torch
+import math
 import torch.backends.cudnn as cudnn
 
 from yolov5.models.common import DetectMultiBackend
@@ -46,7 +47,14 @@ data_truck = []
 data_motor = []
 already = []
 line_pos = 0.6
+start_time = time.time()
+fps_counter = 0
+vehicle_count =0
 
+
+previous_already = []  
+vehicle_count_per_second = 0  
+elapsed_time = 0  
 
 def detect(opt, line, class_id, result_callback):
     car = 0
@@ -57,12 +65,17 @@ def detect(opt, line, class_id, result_callback):
 
     out, source, yolo_model, deep_sort_model, show_vid, save_vid, save_txt, imgsz, evaluate, half, project, name, exist_ok = opt.output, opt.source, opt.yolo_model, opt.deep_sort_model, opt.show_vid, opt.save_vid, opt.save_txt, opt.imgsz, opt.evaluate, opt.half, opt.project, opt.name, opt.exist_ok
 
+    global vehicle_count
+
     # choose custom class from streamlit
     opt.classes = class_id
     webcam = source == '0' or source.startswith('rtsp') or source.startswith('http') or source.endswith('.txt')
     sum_fps = 0
     line_pos = line
     save_vid = True
+    global start_time, fps_counter
+    start_time = time.time()
+    fps_counter = 0
 
     # initialize deepsort
     cfg = get_config()
@@ -108,13 +121,13 @@ def detect(opt, line, class_id, result_callback):
 
     # Dataloader
     if webcam:
-        print('webcam')
+        # print('webcam')
         show_vid = check_imshow()
         cudnn.benchmark = True  # set True to speed up constant image size inference
         dataset = LoadStreams(source, img_size=imgsz, stride=stride, auto=pt and not jit)
         bs = len(dataset)  # batch_size
     else:
-        print('Source')
+        # print('Source')
         dataset = LoadImages(source, img_size=imgsz, stride=stride, auto=pt and not jit)
         bs = 1  # batch_size
     vid_path, vid_writer = [None] * bs, [None] * bs
@@ -197,8 +210,11 @@ def detect(opt, line, class_id, result_callback):
                         label = f'{id} {names[c]} {conf:.2f}'
                         annotator.box_label(bboxes, label, color=colors(c, True))
                         # count_obj(bboxes,w,h,id, names[c], data_car, data_bus, data_truck, data_motor)
-                        count_obj(bboxes, w, h, id, names[c], line_pos)
+                        # count_obj(bboxes, w, h, id, names[c], line_pos)
 
+                        count_obj(bboxes, w, h, id, names[c], line_pos)
+                        # decrease_count_obj_per_frame(bboxes, w, h, id, names[c], line_pos)
+                        
                         if save_txt:
                             # to MOT format
                             bbox_left = output[0]
@@ -207,14 +223,14 @@ def detect(opt, line, class_id, result_callback):
                             bbox_h = output[3] - output[1]
                             # Write MOT compliant results to file
                             with open(txt_path, 'a') as f:
-                                f.write(('%g ' * 10 + '\n') % (frame_idx + 1, id, bbox_left,  # MOT format
+                                f.write(('%g ' * 10  + '\n') % (frame_idx + 1, id, bbox_left,  # MOT format
                                                                bbox_top, bbox_w, bbox_h, -1, -1, -1, -1))
 
-                LOGGER.info(f'{s}Done. YOLO:({t3 - t2:.3f}s), DeepSort:({t5 - t4:.3f}s)')
+                # LOGGER.info(f'{s}Done. YOLO:({t3 - t2:.3f}s), DeepSort:({t5 - t4:.3f}s)')
 
             else:
                 deepsort.increment_ages()
-                LOGGER.info('No detections')
+                # LOGGER.info('No detections')
 
             # Stream results
             im0 = annotator.result()
@@ -275,38 +291,123 @@ def detect(opt, line, class_id, result_callback):
                 # print('FPS: ', fps_)
 
                 # Callback call
-                result_callback(im0, data_car, data_bus, data_truck, data_motor, fps_)
-
+        
+        elapsed_time = time.time() - start_time
+        # print(f"Vehicles detected per second: {sum_fps}")
+        if elapsed_time >= 1.0:  # Check if 1 second has passed
+            print(f"Vehicles detected per second: {len(already)}")
+        # Reset counters for the next second
+            
+            vehicle_count = 0
+            start_time = time.time()
+            fps_counter = 0
+        
+        result_callback(im0, already, fps_)
 
     # Print results
     t = tuple(x / seen * 1E3 for x in dt)  # speeds per image
     # print("Average FPS", round(1 / (sum(list(t)) / 1000), 1))
-    LOGGER.info(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS, %.1fms deep sort update \
-        per image at shape {(1, 3, *imgsz)}' % t)
+    # LOGGER.info(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS, %.1fms deep sort update \
+    #     per image at shape {(1, 3, *imgsz)}' % t)
     if save_txt or save_vid:
         # print('Results saved to %s' % save_path)
         if platform == 'darwin':  # MacOS
             os.system('open ' + save_path)
 
 
+# def decrease_count_obj_per_frame(box, w, h, id, label, line_pos):
+#     global data_car, data_bus, data_truck, data_motor, already, vehicle_count
 
+#     # Calculate the bottom-center of the bounding box
+#     bottom_center_y = int(box[3])  # Use the bottom edge of the bounding box
 
+#     # Define a threshold for considering the vehicle as outside the frame
+#     threshold = 10
+#     # Check if the vehicle's bottom center has moved beyond the frame
+#     if bottom_center_y > h - threshold:
+#         vehicle_count -= 1  # Decrement vehicle count as it has left the frame
 
+#         # Perform further actions if needed (e.g., remove from tracking lists)
+#         if label == 'car' and id in data_car:
+#             data_car.remove(id)
+#         elif label == 'bus' and id in data_bus:
+#             data_bus.remove(id)
+#         elif label == 'truck' and id in data_truck:
+#             data_truck.remove(id)
+#         elif label == 'motorcycle' and id in data_motor:
+#             data_motor.remove(id)
+
+#         # Also reset the 'already' list or object tracking list as needed
+#         if id in already:
+#             already.remove(id)
+    
 def count_obj(box, w, h, id, label, line_pos):
-    global data_car, data_bus, data_truck, data_motor, already
-    center_coordinates = (int(box[0] + (box[2] - box[0]) / 2), int(box[1] + (box[3] - box[1]) / 2))
+    global data_car, data_bus, data_truck, data_motor, already, vehicle_count
+
+    # center_coordinates = (int(box[0] + (box[2] - box[0]) / 2), int(box[1] + (box[3] - box[1]) / 2))
     # classify one time per id
-    if center_coordinates[1] > (h * line_pos):
-        if id not in already:
-            already.append(id)
-            if label == 'car' and id not in data_car:
-                data_car.append(id)
-            elif label == 'bus' and id not in data_bus:
-                data_bus.append(id)
-            elif label == 'truck' and id not in data_truck:
-                data_truck.append(id)
-            elif label == 'motorcycle' and id not in data_motor:
-                data_motor.append(id)
+    if id not in already:
+        already.append(id)
+        vehicle_count += 1
+        if label == 'car' and id not in data_car:
+            data_car.append(id)
+        elif label == 'bus' and id not in data_bus:
+            data_bus.append(id)
+
+        elif label == 'truck' and id not in data_truck:
+            data_truck.append(id)
+
+        elif label == 'motorcycle' and id not in data_motor:
+            data_motor.append(id)
+
+    bottom_center_y = int(box[3])  # Use the bottom edge of the bounding box
+
+    # Define a threshold for considering the vehicle as outside the frame
+    threshold = 10
+    # Check if the vehicle's bottom center has moved beyond the frame
+    if bottom_center_y > h - threshold and id in already:
+        vehicle_count -= 1  # Decrement vehicle count as it has left the frame
+
+        # Perform further actions if needed (e.g., remove from tracking lists)
+        if label == 'car' and id in data_car:
+            data_car.remove(id)
+        elif label == 'bus' and id in data_bus:
+            data_bus.remove(id)
+        elif label == 'truck' and id in data_truck:
+            data_truck.remove(id)
+        elif label == 'motorcycle' and id in data_motor:
+            data_motor.remove(id)
+
+        # Also reset the 'already' list or object tracking list as needed
+        if id in already:
+            already.remove(id)
+
+# def count_obj(box, w, h, id, label, line_pos):
+#     global data_car, data_bus, data_truck, data_motor, already, vehicle_count
+
+#     center_coordinates = (int(box[0] + (box[2] - box[0]) / 2), int(box[1] + (box[3] - box[1]) / 2))
+#     # classify one time per id
+#     if center_coordinates[1] > (h * line_pos):
+#         flag = False
+#         if id not in already:
+#             already.append(id)
+#             if label == 'car' and id not in data_car:
+#                 data_car.append(id)
+#                 flag = True
+#             elif label == 'bus' and id not in data_bus:
+#                 data_bus.append(id)
+#                 flag = True
+
+#             elif label == 'truck' and id not in data_truck:
+#                 data_truck.append(id)
+#                 flag = True
+
+#             elif label == 'motorcycle' and id not in data_motor:
+#                 data_motor.append(id)
+#                 flag = True
+        
+#         if(flag): 
+#             vehicle_count += 1
 
 
 # reset id in data

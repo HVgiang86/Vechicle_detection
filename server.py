@@ -13,7 +13,7 @@ app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, cors_allowed_origins='*')
 
 # socketio = SocketIO(app)
-
+fileName = 'one_lane_traffic_stop.mp4'
 
 @socketio.on('send_image')
 def handle_my_custom_event(data):
@@ -37,11 +37,9 @@ def handleImg(img):
     image_bytes = image_stream.read()
         
     base64Img = base64.b64encode(image_bytes).decode('utf-8')
-    print('base64 image before send:', type(base64Img))
 
     return base64Img
 
-fileName = 'test10s.mp4'
 
 @socketio.on('start')
 def handle_my_custom_event(data):
@@ -49,24 +47,21 @@ def handle_my_custom_event(data):
     start_demo_detection(fileName, detection_callback)
     print("done detection")
 
-def detection_callback(result_image, data_car, data_bus, data_truck, data_motor, fps):
+def detection_callback(result_image, current_vehicle, fps):
     
     base64Img = handleImg(result_image)
-    print("Callback")
+    # print("Callback")
     # print('base64Img: ', base64Img)
-    print('Data car: ', data_car)
-    print('Data Bus: ', data_bus)
-    print('Data Truck: ', data_truck)
-    print('Data motor: ', data_motor)
-    print('FPS: ', fps)
+    # print('Data car: ', data_car)
+    # print('Data Bus: ', data_bus)
+    # print('Data Truck: ', data_truck)
+    # print('Data motor: ', data_motor)
+    # print('FPS: ', fps)
 
     # Emit to socket client from here
     data = {
         "base64Img": base64Img,
-        "car": len(data_car),
-        "bus": len(data_bus),
-        "truck": len(data_truck),
-        "motor": len(data_motor),
+        "current_vehicle_per_fps": len(current_vehicle),
         "fps": fps
     }
 

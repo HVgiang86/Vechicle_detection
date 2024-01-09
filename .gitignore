@@ -2,6 +2,8 @@
 # Folders
 vehicle-counting
 runs
-
+/__pycache__
+/videos
+/runs
 # Files
 
