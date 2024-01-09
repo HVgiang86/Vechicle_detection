@@ -47,7 +47,7 @@ def handle_my_custom_event(data):
     start_demo_detection(fileName, detection_callback)
     print("done detection")
 
-def detection_callback(result_image, current_vehicle, fps):
+def detection_callback(result_image, current_vehicle, data_car, data_bus, data_truck, data_motor, fps):
     
     base64Img = handleImg(result_image)
     # print("Callback")
@@ -62,6 +62,10 @@ def detection_callback(result_image, current_vehicle, fps):
     data = {
         "base64Img": base64Img,
         "current_vehicle_per_fps": len(current_vehicle),
+        "data_car": len(data_car),
+        "data_bus": len(data_bus),
+        "data_truck": len(data_truck),
+        "data_motor": len(data_motor),
         "fps": fps
     }
 

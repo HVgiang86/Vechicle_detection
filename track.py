@@ -214,7 +214,7 @@ def detect(opt, line, class_id, result_callback):
 
                         count_obj(bboxes, w, h, id, names[c], line_pos)
                         # decrease_count_obj_per_frame(bboxes, w, h, id, names[c], line_pos)
-                        
+
                         if save_txt:
                             # to MOT format
                             bbox_left = output[0]
@@ -302,7 +302,7 @@ def detect(opt, line, class_id, result_callback):
             start_time = time.time()
             fps_counter = 0
         
-        result_callback(im0, already, fps_)
+        result_callback(im0, already, data_car, data_bus, data_truck, data_motor, fps_)
 
     # Print results
     t = tuple(x / seen * 1E3 for x in dt)  # speeds per image
